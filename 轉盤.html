@@ -1,0 +1,476 @@
+<!DOCTYPE html>
+<html lang="zh-TW">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-1.0">
+    <title>互動抽獎轉盤</title>
+    <!-- Tailwind CSS CDN -->
+    <script src="https://cdn.tailwindcss.com"></script>
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;600;700&display=swap" rel="stylesheet">
+    <style>
+        body {
+            font-family: 'Inter', sans-serif;
+            background-color: #f0f4f8; /* 淺灰色背景 */
+            display: flex;
+            flex-direction: column; /* 允許垂直堆疊 */
+            justify-content: center;
+            align-items: center;
+            min-height: 100vh;
+            padding: 20px;
+            overflow: auto; /* 允許滾動 */
+        }
+        .main-content {
+            background-color: #ffffff; /* 白色容器背景 */
+            border-radius: 1.5rem; /* 大圓角 */
+            box-shadow: 0 20px 25px -5px rgba(0, 0, 0, 0.1), 0 10px 10px -5px rgba(0, 0, 0, 0.04); /* 大陰影 */
+            padding: 2.5rem; /* 更大的內邊距 */
+            max-width: 900px; /* 最大寬度 */
+            width: 100%;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+        }
+        canvas {
+            border-radius: 50%; /* 圓形 */
+            background-color: #e2e8f0; /* 淺藍灰色背景 */
+            border: 8px solid #cbd5e1; /* 邊框 */
+            box-shadow: inset 0 0 15px rgba(0, 0, 0, 0.1); /* 內陰影 */
+            transition: transform 0.3s ease-out; /* 旋轉動畫 */
+        }
+        .pointer {
+            width: 0;
+            height: 0;
+            border-left: 15px solid transparent;
+            border-right: 15px solid transparent;
+            border-top: 30px solid #ef4444; /* 紅色指針 */
+            position: absolute;
+            top: -35px; /* 指針位置 */
+            left: 50%;
+            transform: translateX(-50%);
+            z-index: 10;
+        }
+        .button-style {
+            padding: 0.75rem 1.5rem;
+            border-radius: 0.75rem; /* 圓角按鈕 */
+            font-weight: 600;
+            transition: all 0.2s ease-in-out;
+            box-shadow: 0 4px 6px rgba(0, 0, 0, 0.1);
+        }
+        .button-primary {
+            background-color: #3b82f6; /* 藍色 */
+            color: white;
+        }
+        .button-primary:hover {
+            background-color: #2563eb; /* 深藍色 */
+            transform: translateY(-2px);
+            box-shadow: 0 6px 8px rgba(0, 0, 0, 0.15);
+        }
+        .button-secondary {
+            background-color: #6b7280; /* 灰色 */
+            color: white;
+        }
+        .button-secondary:hover {
+            background-color: #4b5563; /* 深灰色 */
+            transform: translateY(-2px);
+            box-shadow: 0 6px 8px rgba(0, 0, 0, 0.15);
+        }
+        .button-red {
+            background-color: #ef4444; /* 紅色 */
+            color: white;
+        }
+        .button-red:hover {
+            background-color: #dc2626; /* 深紅色 */
+            transform: translateY(-2px);
+            box-shadow: 0 6px 8px rgba(0, 0, 0, 0.15);
+        }
+        .button-green {
+            background-color: #22c55e; /* 綠色 */
+            color: white;
+        }
+        .button-green:hover {
+            background-color: #16a34a; /* 深綠色 */
+            transform: translateY(-2px);
+            box-shadow: 0 6px 8px rgba(0, 0, 0, 0.15);
+        }
+        input[type="text"], input[type="number"] {
+            padding: 0.75rem 1rem;
+            border-radius: 0.75rem;
+            border: 2px solid #d1d5db; /* 淺灰色邊框 */
+            outline: none;
+            transition: border-color 0.2s ease-in-out;
+        }
+        input[type="text"]:focus, input[type="number"]:focus {
+            border-color: #3b82f6; /* 藍色焦點邊框 */
+            box-shadow: 0 0 0 3px rgba(59, 130, 246, 0.25);
+        }
+
+        /* Confetti animation */
+        .confetti-piece {
+            position: absolute;
+            width: 10px;
+            height: 10px;
+            background-color: currentColor;
+            opacity: 0;
+            animation: confetti-fall 3s ease-out forwards;
+        }
+
+        @keyframes confetti-fall {
+            0% {
+                transform: translateY(-10px) rotate(0deg);
+                opacity: 0;
+            }
+            10% {
+                opacity: 1;
+            }
+            100% {
+                transform: translateY(calc(100vh + 50px)) rotate(720deg);
+                opacity: 0;
+            }
+        }
+    </style>
+</head>
+<body class="bg-gray-100 min-h-screen flex flex-col items-center justify-center p-5">
+    <div class="main-content flex flex-col lg:flex-row gap-8 items-center mb-8"> <!-- Added mb-8 for spacing -->
+        <!-- Wheel Section -->
+        <div class="relative flex-shrink-0" style="width: 400px; height: 400px;">
+            <canvas id="luckyWheel" width="400" height="400" class="rounded-full shadow-lg transition-transform duration-1000"></canvas>
+            <div class="pointer absolute z-10 top-0 left-1/2 -translate-x-1/2"></div>
+        </div>
+
+        <!-- Controls Section -->
+        <div class="w-full lg:w-1/2 flex flex-col gap-6 p-4">
+            <h1 class="text-4xl font-extrabold text-gray-800 text-center mb-4">抽獎轉盤</h1>
+
+            <!-- Result Display -->
+            <div id="result" class="text-3xl font-bold text-center text-green-600 min-h-[4rem] flex items-center justify-center p-3 border-4 border-dashed border-green-300 rounded-xl bg-green-50 shadow-inner">
+                點擊「旋轉」開始
+            </div>
+
+            <!-- Spin Button -->
+            <button id="spinBtn" class="button-style button-primary w-full text-2xl py-4 shadow-xl hover:shadow-2xl">
+                旋轉！
+            </button>
+
+            <!-- Reset Quantities Button -->
+            <button id="resetQuantitiesBtn" class="button-style button-secondary w-full text-lg py-3 mt-4">重置所有獎品數量</button>
+        </div>
+    </div>
+
+    <!-- Entries List (Moved to bottom, now shows quantities) -->
+    <div class="w-full max-w-lg border border-gray-300 rounded-xl p-4 bg-gray-50 max-h-64 overflow-y-auto shadow-inner">
+        <h2 class="text-xl font-semibold text-gray-700 mb-3 text-center">抽獎項目管理：</h2>
+        <!-- Add/Edit New Entry Section -->
+        <div class="flex flex-col sm:flex-row gap-3 mb-4">
+            <input type="text" id="newEntry" placeholder="新增/編輯抽獎項目名稱" class="flex-grow rounded-xl shadow-sm text-lg" />
+            <input type="number" id="newEntryQuantity" placeholder="數量" class="w-24 rounded-xl shadow-sm text-lg" value="1" min="1" />
+            <button id="addEntryBtn" class="button-style button-secondary text-lg whitespace-nowrap">新增</button>
+        </div>
+        <ul id="entriesList" class="space-y-2 text-gray-700">
+            <!-- Entries will be dynamically added here -->
+        </ul>
+        <p id="noEntriesMessage" class="text-gray-500 italic text-center mt-4 hidden">尚無抽獎項目。請新增一些！</p>
+    </div>
+
+    <script>
+        // Canvas Setup
+        const canvas = document.getElementById('luckyWheel');
+        const ctx = canvas.getContext('2d');
+        const spinBtn = document.getElementById('spinBtn');
+        const addEntryBtn = document.getElementById('addEntryBtn');
+        const newEntryInput = document.getElementById('newEntry');
+        const newEntryQuantityInput = document.getElementById('newEntryQuantity');
+        const entriesList = document.getElementById('entriesList');
+        const resultDisplay = document.getElementById('result');
+        const noEntriesMessage = document.getElementById('noEntriesMessage');
+        const resetQuantitiesBtn = document.getElementById('resetQuantitiesBtn');
+
+        // Raffle entries and quantities, including initial settings
+        let entries = [
+            { name: 'ECE 隨身碟', quantity: 10, originalQuantity: 10 },
+            { name: 'ECV 飲料提袋', quantity: 80, originalQuantity: 80 },
+            { name: 'ECE L夾', quantity: 70, originalQuantity: 70 },
+            { name: '711 禮券', quantity: 50, originalQuantity: 50 },
+            { name: '小米喇叭', quantity: 4, originalQuantity: 4 }
+        ];
+
+        let isSpinning = false;
+        // Global variable to store the accumulated rotation in radians
+        // This ensures the wheel always spins forward from its last visual position
+        let currentRotation = 0;
+        // Variable to keep track of the index of the item being edited
+        let editingIndex = null;
+
+        const colors = [
+            '#FFD700', '#FF6347', '#6A5ACD', '#3CB371', '#FF4500', '#1E90FF',
+            '#DA70D6', '#B0C4DE', '#FFA07A', '#7CFC00', '#BA55D3', '#CD5C5C'
+        ]; // More color options
+
+        // Draw the wheel
+        function drawWheel() {
+            ctx.clearRect(0, 0, canvas.width, canvas.height);
+            const total = entries.length;
+            const arc = Math.PI * 2 / total;
+
+            if (total === 0) {
+                ctx.font = '24px Inter';
+                ctx.fillStyle = '#6B7280';
+                ctx.textAlign = 'center';
+                ctx.textBaseline = 'middle';
+                ctx.fillText('請新增抽獎項目', canvas.width / 2, canvas.height / 2);
+                spinBtn.disabled = true;
+                return;
+            } else {
+                // Enable spin button only if there are available items
+                const hasAvailableItems = entries.some(item => item.quantity > 0);
+                spinBtn.disabled = !hasAvailableItems;
+            }
+
+            for (let i = 0; i < total; i++) {
+                const angle = i * arc;
+                ctx.beginPath();
+                ctx.arc(canvas.width / 2, canvas.height / 2, canvas.width / 2, angle, angle + arc);
+                ctx.lineTo(canvas.width / 2, canvas.height / 2);
+                ctx.fillStyle = colors[i % colors.length];
+                ctx.fill();
+                ctx.strokeStyle = '#ffffff'; // Divider line color
+                ctx.lineWidth = 2; // Divider line width
+                ctx.stroke();
+
+                ctx.save();
+                ctx.translate(canvas.width / 2 + Math.cos(angle + arc / 2) * (canvas.width / 2 - 40),
+                              canvas.height / 2 + Math.sin(angle + arc / 2) * (canvas.width / 2 - 40));
+                ctx.rotate(angle + arc / 2 + Math.PI / 2);
+                ctx.font = 'bold 18px Inter'; // Font size
+                ctx.fillStyle = '#333333'; // Font color
+                ctx.textAlign = 'center';
+                ctx.textBaseline = 'middle';
+
+                // Display item name
+                const text = entries[i].name;
+                const maxTextWidth = arc * (canvas.width / 2 - 50) * 0.9; // Adjust based on sector width
+                ctx.fillText(text, 0, 0, maxTextWidth); // Limit text width
+                ctx.restore();
+            }
+        }
+
+        // Update raffle entries list (display quantities)
+        function updateEntriesList() {
+            entriesList.innerHTML = '';
+            if (entries.length === 0) {
+                noEntriesMessage.classList.remove('hidden');
+            } else {
+                noEntriesMessage.classList.add('hidden');
+                entries.forEach((entry, index) => {
+                    const listItem = document.createElement('li');
+                    listItem.className = 'flex justify-between items-center bg-white p-3 rounded-lg shadow-sm';
+                    // Display remaining quantity and total quantity
+                    const quantityText = entry.quantity === 0 ? '已抽完' : `${entry.quantity}/${entry.originalQuantity}`;
+                    listItem.innerHTML = `
+                        <span class="text-gray-800 text-lg">${entry.name} (${quantityText})</span>
+                        <div class="flex gap-2">
+                            <button data-index="${index}" class="edit-entry-btn button-style button-green py-1 px-3 text-sm">編輯</button>
+                            <button data-index="${index}" class="remove-entry-btn button-style button-red py-1 px-3 text-sm">移除</button>
+                        </div>
+                    `;
+                    entriesList.appendChild(listItem);
+                });
+            }
+            drawWheel(); // Redraw the wheel
+        }
+
+        // Spin the wheel
+        function spinWheel() {
+            if (isSpinning || entries.length === 0) return;
+
+            // Filter out items with zero quantity, only select from available items
+            const availableEntries = entries.filter(item => item.quantity > 0);
+
+            if (availableEntries.length === 0) {
+                resultDisplay.textContent = '所有獎品都已送完！';
+                resultDisplay.className = 'text-3xl font-bold text-center text-red-600 min-h-[4rem] flex items-center justify-center p-3 border-4 border-dashed border-red-300 rounded-xl bg-red-50 shadow-inner';
+                spinBtn.disabled = true;
+                return;
+            }
+
+            isSpinning = true;
+            spinBtn.disabled = true;
+            resultDisplay.textContent = '旋轉中...';
+            resultDisplay.className = 'text-3xl font-bold text-center text-gray-600 min-h-[4rem] flex items-center justify-center p-3 border-4 border-dashed border-gray-300 rounded-xl bg-gray-50 shadow-inner';
+
+            const totalSegments = entries.length;
+            const arc = Math.PI * 2 / totalSegments;
+
+            // Randomly select a winner from available items
+            const randomIndexInAvailable = Math.floor(Math.random() * availableEntries.length);
+            const winner = availableEntries[randomIndexInAvailable];
+
+            // Find the actual index of the winner in the *full* `entries` array
+            const winnerOriginalIndex = entries.findIndex(item => item.name === winner.name);
+
+            // Calculate the initial angle of the *center* of the winning segment (relative to the right horizontal axis, clockwise)
+            const segmentCenterInitialAngle = (winnerOriginalIndex * arc) + (arc / 2);
+
+            // The pointer is fixed at the top, which is 270 degrees or 1.5 * Math.PI radians (clockwise from right)
+            const pointerAngle = 1.5 * Math.PI; // Corresponds to top center for the pointer
+
+            // Calculate the angle the wheel needs to rotate *from its zero position*
+            // to bring the center of the winning segment to the pointer.
+            let targetWheelOrientation = pointerAngle - segmentCenterInitialAngle;
+            // Normalize this target orientation to be between 0 and 2*PI
+            targetWheelOrientation = (targetWheelOrientation % (2 * Math.PI) + (2 * Math.PI)) % (2 * Math.PI);
+
+            // Calculate how much more we need to rotate from the *current accumulated rotation*
+            // to reach the desired target orientation.
+            let currentVisualOrientation = currentRotation % (2 * Math.PI);
+            currentVisualOrientation = (currentVisualOrientation + (2 * Math.PI)) % (2 * Math.PI); // Ensure positive
+
+            // Calculate the smallest positive rotation to move from current visual to target visual
+            let neededRelativeRotation = (targetWheelOrientation - currentVisualOrientation + (2 * Math.PI)) % (2 * Math.PI);
+
+            // Add required minimum full rotations to ensure a visible spin
+            const minFullRotations = 5;
+            const finalRotation = currentRotation + neededRelativeRotation + (minFullRotations * 2 * Math.PI);
+
+            // Temporarily remove transition, snap to current rotation, force reflow, then reapply transition
+            canvas.style.transition = 'none';
+            canvas.style.transform = `rotate(${currentRotation}rad)`;
+            // Force browser to render the change before applying new transition
+            void canvas.offsetWidth;
+            canvas.style.transition = 'transform 5s cubic-bezier(0.25, 0.1, 0.25, 1)';
+            
+            canvas.style.transform = `rotate(${finalRotation}rad)`;
+
+            // Update the total accumulated rotation for the next spin
+            currentRotation = finalRotation;
+
+            // After animation ends
+            setTimeout(() => {
+                isSpinning = false;
+                spinBtn.disabled = false;
+
+                const originalWinnerItem = entries.find(item => item.name === winner.name);
+                if (originalWinnerItem && originalWinnerItem.quantity > 0) {
+                    originalWinnerItem.quantity--;
+                }
+
+                updateEntriesList(); // Update the list and redraw the wheel
+
+                // Display the result without quantity information
+                resultDisplay.textContent = `恭喜！${winner.name}！`;
+                resultDisplay.className = 'text-3xl font-bold text-center text-green-600 min-h-[4rem] flex items-center justify-center p-3 border-4 border-dashed border-green-300 rounded-xl bg-green-50 shadow-inner';
+
+                // If all items are exhausted, disable the spin button
+                if (entries.every(item => item.quantity === 0)) {
+                    spinBtn.disabled = true;
+                    resultDisplay.textContent = '所有獎品都已送完！';
+                    resultDisplay.className = 'text-3xl font-bold text-center text-red-600 min-h-[4rem] flex items-center justify-center p-3 border-4 border-dashed border-red-300 rounded-xl bg-red-50 shadow-inner';
+                }
+                createConfetti();
+            }, 5000); // Display result after 5 seconds
+        }
+
+        // Create confetti effect
+        function createConfetti() {
+            const colors = ['#f44336', '#e91e63', '#9c27b0', '#673ab7', '#3f51b5', '#2196f3', '#03a9f4', '#00bcd4', '#009688', '#4CAF50', '#8BC34A', '#CDDC39', '#FFEB3B', '#FFC107', '#FF9800', '#FF5722', '#795548', '#9E9E9E', '#607D8B'];
+            const confettiContainer = document.body;
+
+            for (let i = 0; i < 50; i++) {
+                const piece = document.createElement('div');
+                piece.className = 'confetti-piece';
+                piece.style.backgroundColor = colors[Math.floor(Math.random() * colors.length)];
+                piece.style.left = Math.random() * window.innerWidth + 'px';
+                piece.style.top = Math.random() * -window.innerHeight + 'px'; // Fall from above
+                piece.style.animationDelay = (Math.random() * 2) + 's';
+                confettiContainer.appendChild(piece);
+
+                // Remove confetti element to avoid DOM bloat
+                piece.addEventListener('animationend', () => {
+                    piece.remove();
+                });
+            }
+        }
+
+        // Event Listeners
+        spinBtn.addEventListener('click', spinWheel);
+
+        addEntryBtn.addEventListener('click', () => {
+            const newEntryText = newEntryInput.value.trim();
+            const newEntryQuantity = parseInt(newEntryQuantityInput.value.trim());
+
+            if (newEntryText && !isNaN(newEntryQuantity) && newEntryQuantity > 0) {
+                if (editingIndex !== null) {
+                    // Update existing entry
+                    entries[editingIndex].name = newEntryText;
+                    entries[editingIndex].originalQuantity = newEntryQuantity; // Update original quantity
+                    entries[editingIndex].quantity = newEntryQuantity; // Reset current quantity if editing
+                    editingIndex = null; // Clear editing state
+                    addEntryBtn.textContent = '新增'; // Change button back to Add
+                    addEntryBtn.classList.remove('button-green');
+                    addEntryBtn.classList.add('button-secondary');
+                } else {
+                    // Add new entry
+                    entries.push({ name: newEntryText, quantity: newEntryQuantity, originalQuantity: newEntryQuantity });
+                }
+                newEntryInput.value = '';
+                newEntryQuantityInput.value = '1'; // Reset quantity input
+                updateEntriesList();
+            } else {
+                resultDisplay.textContent = '請輸入有效的項目名稱和數量。';
+                resultDisplay.className = 'text-3xl font-bold text-center text-red-600 min-h-[4rem] flex items-center justify-center p-3 border-4 border-dashed border-red-300 rounded-xl bg-red-50 shadow-inner';
+            }
+        });
+
+        newEntryInput.addEventListener('keypress', (e) => {
+            if (e.key === 'Enter') {
+                addEntryBtn.click();
+            }
+        });
+
+        entriesList.addEventListener('click', (e) => {
+            if (e.target.classList.contains('remove-entry-btn')) {
+                const indexToRemove = parseInt(e.target.dataset.index);
+                entries.splice(indexToRemove, 1);
+                updateEntriesList();
+                // If the item being edited was removed, clear editing state
+                if (editingIndex === indexToRemove) {
+                    editingIndex = null;
+                    addEntryBtn.textContent = '新增';
+                    addEntryBtn.classList.remove('button-green');
+                    addEntryBtn.classList.add('button-secondary');
+                    newEntryInput.value = '';
+                    newEntryQuantityInput.value = '1';
+                } else if (editingIndex > indexToRemove) {
+                    // Adjust editingIndex if items before it were removed
+                    editingIndex--;
+                }
+
+            } else if (e.target.classList.contains('edit-entry-btn')) {
+                const indexToEdit = parseInt(e.target.dataset.index);
+                editingIndex = indexToEdit;
+                newEntryInput.value = entries[editingIndex].name;
+                newEntryQuantityInput.value = entries[editingIndex].originalQuantity; // Populate with original quantity
+                addEntryBtn.textContent = '更新';
+                addEntryBtn.classList.remove('button-secondary');
+                addEntryBtn.classList.add('button-green');
+                // Scroll to the input fields for better UX
+                newEntryInput.focus();
+            }
+        });
+
+        resetQuantitiesBtn.addEventListener('click', () => {
+            entries.forEach(item => {
+                item.quantity = item.originalQuantity; // Reset quantity to original value
+            });
+            updateEntriesList();
+            spinBtn.disabled = false; // Enable spin button
+            resultDisplay.textContent = '點擊「旋轉」開始'; // Reset result display
+            resultDisplay.className = 'text-3xl font-bold text-center text-green-600 min-h-[4rem] flex items-center justify-center p-3 border-4 border-dashed border-green-300 rounded-xl bg-green-50 shadow-inner';
+        });
+
+        // Initialization
+        window.onload = () => {
+            updateEntriesList();
+        };
+    </script>
+</body>
+</html>
