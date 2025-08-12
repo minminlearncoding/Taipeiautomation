@@ -186,11 +186,11 @@
 
         // Raffle entries and quantities, including initial settings
         let entries = [
-            { name: 'ECE 隨身碟', quantity: 0, originalQuantity: 10 },
-            { name: 'ECV 飲料提袋', quantity: 0, originalQuantity: 80 },
-            { name: 'ECE L夾', quantity: 0, originalQuantity: 70 },
-            { name: '711 禮券', quantity: 0, originalQuantity: 50 },
-            { name: '小米喇叭', quantity: 0, originalQuantity: 4 }
+            { name: 'ECE 隨身碟', quantity: 0, originalQuantity: 2 },
+            { name: 'ECV 飲料提袋', quantity: 0, originalQuantity: 30 },
+            { name: 'ECE L夾', quantity: 0, originalQuantity: 30 },
+            { name: '711 禮券', quantity: 0, originalQuantity: 12 },
+            { name: '小米喇叭', quantity: 0, originalQuantity: 1 }
         ];
 
         let isSpinning = false;
@@ -199,6 +199,8 @@
         let currentRotation = 0;
         // Variable to keep track of the index of the item being edited
         let editingIndex = null;
+        // Counter for spins to implement the restriction
+        let spinCount = 0;
 
         const colors = [
             '#FFD700', '#FF6347', '#6A5ACD', '#3CB371', '#FF4500', '#1E90FF',
@@ -282,10 +284,26 @@
         function spinWheel() {
             if (isSpinning || entries.length === 0) return;
 
-            // Filter out items with zero quantity, only select from available items
-            const availableEntries = entries.filter(item => item.quantity > 0);
+            // Increment spin count
+            spinCount++;
 
-            if (availableEntries.length === 0) {
+            let currentAvailableEntries = entries.filter(item => item.quantity > 0);
+
+            // Define restricted items
+            const restrictedItems = ['小米喇叭', 'ECE 隨身碟', '711 禮券'];
+
+            // Apply restriction for the first 4 spins if there are other items available
+            if (spinCount <= 4) {
+                const nonRestrictedAvailable = currentAvailableEntries.filter(item => !restrictedItems.includes(item.name));
+                if (nonRestrictedAvailable.length > 0) {
+                    currentAvailableEntries = nonRestrictedAvailable;
+                }
+                // If only restricted items are left within the first 4 spins,
+                // we allow them to be chosen to prevent the wheel from being stuck.
+                // No 'else' needed here, currentAvailableEntries will remain as is.
+            }
+
+            if (currentAvailableEntries.length === 0) {
                 resultDisplay.textContent = '所有獎品都已送完！';
                 resultDisplay.className = 'text-3xl font-bold text-center text-red-600 min-h-[4rem] flex items-center justify-center p-3 border-4 border-dashed border-red-300 rounded-xl bg-red-50 shadow-inner';
                 spinBtn.disabled = true;
@@ -300,9 +318,9 @@
             const totalSegments = entries.length;
             const arc = Math.PI * 2 / totalSegments;
 
-            // Randomly select a winner from available items
-            const randomIndexInAvailable = Math.floor(Math.random() * availableEntries.length);
-            const winner = availableEntries[randomIndexInAvailable];
+            // Randomly select a winner from the (potentially filtered) available items
+            const randomIndexInAvailable = Math.floor(Math.random() * currentAvailableEntries.length);
+            const winner = currentAvailableEntries[randomIndexInAvailable];
 
             // Find the actual index of the winner in the *full* `entries` array
             const winnerOriginalIndex = entries.findIndex(item => item.name === winner.name);
@@ -465,6 +483,7 @@
             spinBtn.disabled = false; // Enable spin button
             resultDisplay.textContent = '點擊「旋轉」開始'; // Reset result display
             resultDisplay.className = 'text-3xl font-bold text-center text-green-600 min-h-[4rem] flex items-center justify-center p-3 border-4 border-dashed border-green-300 rounded-xl bg-green-50 shadow-inner';
+            spinCount = 0; // Reset spin count when quantities are reset
         });
 
         // Initialization
