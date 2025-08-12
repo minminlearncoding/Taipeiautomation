@@ -190,8 +190,8 @@
             { name: 'ECV 飲料提袋', quantity: 0, originalQuantity: 30 },
             { name: 'ECE L夾', quantity: 0, originalQuantity: 30 },
             { name: '711 禮券', quantity: 0, originalQuantity: 12 },
-            { name: '小米喇叭', quantity: 0, originalQuantity: 1 }
-            { name: 'ECV 精美筆記本', quantity: 0, originalQuantity: 5 }
+            { name: '小米喇叭', quantity: 0, originalQuantity: 1 },
+            { name: 'ECV 精美筆記本', quantity: 0, originalQuantity: 5 } // New item added here
         ];
 
         let isSpinning = false;
@@ -317,7 +317,7 @@
             resultDisplay.className = 'text-3xl font-bold text-center text-gray-600 min-h-[4rem] flex items-center justify-center p-3 border-4 border-dashed border-gray-300 rounded-xl bg-gray-50 shadow-inner';
 
             const totalSegments = entries.length;
-            const arc = Math.PI * 2 / totalSegments;
+            const arc = Math.PI * 2 / totalSegments; // Angle of each segment
 
             // Randomly select a winner from the (potentially filtered) available items
             const randomIndexInAvailable = Math.floor(Math.random() * currentAvailableEntries.length);
@@ -326,15 +326,19 @@
             // Find the actual index of the winner in the *full* `entries` array
             const winnerOriginalIndex = entries.findIndex(item => item.name === winner.name);
 
-            // Calculate the initial angle of the *center* of the winning segment (relative to the right horizontal axis, clockwise)
+            // Calculate the initial angle of the *center* of the winning segment
+            // (relative to the right horizontal axis, clockwise, 0 is right)
             const segmentCenterInitialAngle = (winnerOriginalIndex * arc) + (arc / 2);
 
-            // The pointer is fixed at the top, which is 270 degrees or 1.5 * Math.PI radians (clockwise from right)
-            const pointerAngle = 1.5 * Math.PI; // Corresponds to top center for the pointer
+            // The pointer is fixed at the top (12 o'clock), which is 270 degrees or 1.5 * Math.PI radians
+            // (clockwise from right horizontal axis, 0 is right)
+            const pointerAngle = 1.5 * Math.PI;
 
             // Calculate the angle the wheel needs to rotate *from its zero position*
             // to bring the center of the winning segment to the pointer.
+            // This assumes a coordinate system where 0 is right and positive is clockwise.
             let targetWheelOrientation = pointerAngle - segmentCenterInitialAngle;
+            
             // Normalize this target orientation to be between 0 and 2*PI
             targetWheelOrientation = (targetWheelOrientation % (2 * Math.PI) + (2 * Math.PI)) % (2 * Math.PI);
 
@@ -351,12 +355,14 @@
             const finalRotation = currentRotation + neededRelativeRotation + (minFullRotations * 2 * Math.PI);
 
             // Temporarily remove transition, snap to current rotation, force reflow, then reapply transition
+            // This is crucial for reliably re-triggering the CSS animation.
             canvas.style.transition = 'none';
             canvas.style.transform = `rotate(${currentRotation}rad)`;
             // Force browser to render the change before applying new transition
-            void canvas.offsetWidth;
+            void canvas.offsetWidth; 
             canvas.style.transition = 'transform 5s cubic-bezier(0.25, 0.1, 0.25, 1)';
             
+            // Apply the final rotation
             canvas.style.transform = `rotate(${finalRotation}rad)`;
 
             // Update the total accumulated rotation for the next spin
@@ -382,7 +388,7 @@
                 if (entries.every(item => item.quantity === 0)) {
                     spinBtn.disabled = true;
                     resultDisplay.textContent = '所有獎品都已送完！';
-                    resultDisplay.className = 'text-3xl font-bold text-center text-red-600 min-h-[4rem] flex items-center justify-center p-3 border-4 border-dashed border-red-300 rounded-xl bg-red-50 shadow-inner';
+                    resultDisplay.className = 'text-3xl font-bold text-center text-red-600 min-h-[4rem] flex items-center justify-center p-center p-3 border-4 border-dashed border-red-300 rounded-xl bg-red-50 shadow-inner';
                 }
                 createConfetti();
             }, 5000); // Display result after 5 seconds
@@ -483,8 +489,12 @@
             updateEntriesList();
             spinBtn.disabled = false; // Enable spin button
             resultDisplay.textContent = '點擊「旋轉」開始'; // Reset result display
-            resultDisplay.className = 'text-3xl font-bold text-center text-green-600 min-h-[4rem] flex items-center justify-center p-3 border-4 border-dashed border-green-300 rounded-xl bg-green-50 shadow-inner';
+            resultDisplay.className = 'text-3xl font-bold text-center text-green-600 min-h-[4rem] flex items-center justify-center p-3 border-4 border-dashed border-green-300 rounded-xl bg-green-50-shadow-inner';
             spinCount = 0; // Reset spin count when quantities are reset
+            currentRotation = 0; // Reset currentRotation
+            canvas.style.transition = 'none'; // Temporarily disable transition
+            canvas.style.transform = `rotate(0rad)`; // Reset visual rotation
+            void canvas.offsetWidth; // Force reflow
         });
 
         // Initialization
@@ -494,4 +504,3 @@
     </script>
 </body>
 </html>
-
