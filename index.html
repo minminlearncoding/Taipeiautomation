@@ -186,12 +186,12 @@
 
         // Raffle entries and quantities, including initial settings
         let entries = [
-            { name: 'ECE 隨身碟', quantity: 0, originalQuantity: 2 },
-            { name: 'ECV 飲料提袋', quantity: 0, originalQuantity: 30 },
-            { name: 'ECE L夾', quantity: 0, originalQuantity: 30 },
+            { name: '隨身碟', quantity: 0, originalQuantity: 2 },
+            { name: '飲料提袋', quantity: 0, originalQuantity: 30 },
+            { name: 'L夾', quantity: 0, originalQuantity: 30 },
             { name: '全家 禮券', quantity: 0, originalQuantity: 12 },
             { name: '小米喇叭', quantity: 0, originalQuantity: 1 },
-            { name: 'ECV 精美筆記本', quantity: 0, originalQuantity: 5 } // New item added here
+            { name: '精美筆記本', quantity: 0, originalQuantity: 5 } // New item added here
         ];
 
         let isSpinning = false;
@@ -291,7 +291,7 @@
             let currentAvailableEntries = entries.filter(item => item.quantity > 0);
 
             // Define restricted items
-            const restrictedItems = ['小米喇叭', 'ECE 隨身碟', '全家 禮券'];
+            const restrictedItems = ['小米喇叭', '隨身碟', '全家 禮券'];
 
             // Apply restriction for the first 4 spins if there are other items available
             if (spinCount <= 4) {
@@ -504,4 +504,5 @@
     </script>
 </body>
 </html>
+
 
